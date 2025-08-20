@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudTrail Configuration for Security Monitoring'
+
+Parameters:
+  TrailBucketName:
+    Type: String
+    Description: S3 bucket for CloudTrail logs
+
+Resources:
+  CloudTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      TrailName: organization-security-trail
+      S3BucketName: !Ref TrailBucketName
+      IncludeGlobalServiceEvents: true
+      IsLogging: true
+      IsMultiRegionTrail: true
+      EnableLogFileValidation: true
+      EventSelectors:
+        - ReadWriteType: All
+          IncludeManagementEvents: true
+          DataResources:
+            - Type: AWS::S3::Object
+              Values: 
+                - "arn:aws:s3:::*/*"
+            - Type: AWS::Lambda::Function
+              Values: 
+                - "arn:aws:lambda:*:*:function/*"
+      InsightSelectors:
+        - InsightType: ApiCallRateInsight
+
+  CloudTrailLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/cloudtrail/security
+      RetentionInDays: 90
+
+  CloudTrailLogStream:
+    Type: AWS::Logs::LogStream
+    Properties:
+      LogGroupName: !Ref CloudTrailLogGroup
+      LogStreamName: security-events

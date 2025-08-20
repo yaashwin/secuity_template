@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Config Rules for Security Compliance'
+
+Resources:
+  ConfigRecorder:
+    Type: AWS::Config::ConfigurationRecorder
+    Properties:
+      Name: security-recorder
+      RecordingGroup:
+        AllSupported: true
+        IncludeGlobalResourceTypes: true
+      RoleARN: !GetAtt ConfigRole.Arn
+
+  ConfigDeliveryChannel:
+    Type: AWS::Config::DeliveryChannel
+    Properties:
+      Name: security-delivery-channel
+      S3BucketName: !Ref ConfigBucket
+
+  ConfigRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: config.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/ConfigRole
+
+  ConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::AccountId}-config-bucket'
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  S3BucketPublicReadProhibited:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: s3-bucket-public-read-prohibited
+      Description: Checks S3 buckets do not allow public read access
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_PUBLIC_READ
+    S3BucketSSLRequestsOnly:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: s3-bucket-ssl-requests-only
+      Description: Checks S3 buckets have policies that require SSL
+      Source:
+        Owner: AWS
+        SourceIdentifier: S3_BUCKET_SSL_REQUESTS_ONLY
+
+  RootAccountMFAEnabled:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: root-account-mfa-enabled
+      Description: Checks if root account has MFA enabled
+      Source:
+        Owner: AWS
+        SourceIdentifier: ROOT_ACCOUNT_MFA_ENABLED
+
+  IAMPasswordPolicy:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      ConfigRuleName: iam-password-policy
+      Description: Checks IAM password policy meets requirements
+      Source:
+        Owner: AWS
+        SourceIdentifier: IAM_PASSWORD_POLICY
+      InputParameters:
+        RequireUppercaseCharacters: true
+        RequireLowercaseCharacters: true
+        RequireSymbols: true
+        RequireNumbers: true
+        MinimumPasswordLength: 14
+        PasswordReusePrevention: 24
+        MaxPasswordAge: 90

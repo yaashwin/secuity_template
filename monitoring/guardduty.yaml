@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'GuardDuty Configuration'
+
+Resources:
+  GuardDutyDetector:
+    Type: AWS::GuardDuty::Detector
+    Properties:
+      Enable: true
+      FindingPublishingFrequency: FIFTEEN_MINUTES
+      DataSources:
+        S3Logs:
+          Enable: true
+
+  GuardDutySNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: GuardDutyAlerts
+      DisplayName: GuardDuty Security Alerts
+      KmsMasterKeyId: alias/aws/sns
+
+  GuardDutyEventRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: GuardDutyFindingsRule
+      Description: Send GuardDuty findings to SNS
+      EventPattern:
+        source:
+          - aws.guardduty
+        detail-type:
+          - GuardDuty Finding
+      State: ENABLED
+      Targets:
+        - Arn: !Ref GuardDutySNSTopic
+          Id: "1"

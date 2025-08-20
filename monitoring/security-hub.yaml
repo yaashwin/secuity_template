@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS Security Hub Configuration'
+
+Resources:
+  SecurityHub:
+    Type: AWS::SecurityHub::Hub
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: Production
+        - Key: Purpose
+          Value: Security-Monitoring
+
+  CISStandard:
+    Type: AWS::SecurityHub::Standard
+    DependsOn: SecurityHub
+    Properties:
+      StandardsArn: !Sub 'arn:aws:securityhub:${AWS::Region}::standards/cis-aws-foundations-benchmark/v/1.4.0'
+
+  AWSFoundationalSecurityStandard:
+    Type: AWS::SecurityHub::Standard
+    DependsOn: SecurityHub
+    Properties:
+      StandardsArn: !Sub 'arn:aws:securityhub:${AWS::Region}::standards/aws-foundational-security-best-practices/v/1.0.0'
+
+  SecurityHubCustomAction:
+    Type: AWS::SecurityHub::CustomAction
+    Properties:
+      Name: SendToIncidentResponse
+      Description: Send finding to incident response team
+      Id: SendToIR
